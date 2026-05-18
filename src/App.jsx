@@ -6,6 +6,7 @@ function App() {
   const [url, setUrl] = useState("");
   const [message, setMessage] = useState("");
   const [statut, setStatut] = useState("");
+  const [chargement, setChargement] = useState(false);
 
   async function verifierUrl() {
     try {
@@ -15,6 +16,22 @@ function App() {
     } catch (erreur) {
       setMessage(erreur);
       setStatut("erreur");
+    }
+  }
+
+  async function obtenirTitre() {
+    setChargement(true);
+    setMessage("Recherche du titre...");
+    setStatut("");
+    try {
+      const titre = await invoke("obtenir_titre_video", { url });
+      setMessage(`Titre : ${titre}`);
+      setStatut("succes");
+    } catch (erreur) {
+      setMessage(erreur);
+      setStatut("erreur");
+    } finally {
+      setChargement(false);
     }
   }
 
@@ -34,6 +51,9 @@ function App() {
           placeholder="Colle ici une URL YouTube..."
         />
         <button type="submit">Vérifier</button>
+        <button type="button" onClick={obtenirTitre} disabled={chargement}>
+          Obtenir le titre
+        </button>
       </form>
       {message && <p className={statut}>{message}</p>}
     </main>
