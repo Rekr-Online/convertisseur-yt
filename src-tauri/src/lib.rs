@@ -1,4 +1,5 @@
 use regex::Regex;
+use tauri_plugin_shell::ShellExt;
 
 // Garde la fonction greet pour test
 #[tauri::command]
@@ -19,12 +20,35 @@ fn valider_url_youtube(url: &str) -> Result<String, String> {
         Err(format!("URL YouTube invalide : {}", url))
     }
 }
+#[tauri::command]
+async fn obtenir_titre_video(
+    app: tauri::AppHandle,
+    url: String,
+) -> Result<String, String> {
+    let sortie = app
+        .shell()
+        .sidecar("yt-dlp")
+        .map_err(|e| format!("Sidecar introuvable : {}", e))?
+        .args(["--get-title", &url])
+        .output()
+        .await
+        .map_err(|e| format!("Erreur d'exécution : {}", e))?;
+
+    if sortie.status.success() {
+        let titre = String::from_utf8_lossy(&sortie.stdout).trim().to_string();
+        Ok(titre)
+    } else {
+        let erreur = String::from_utf8_lossy(&sortie.stderr).to_string();
+        Err(format!("yt-dlp a échoué : {}", erreur))
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, valider_url_youtube])
+        .plugin(tauri_plugin_shell::init())
+        .invoke_handler(tauri::generate_handler![greet, valider_url_youtube, obtenir_titre_video])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
