@@ -1,49 +1,41 @@
 import { useState } from "react";
-import reactLogo from "./assets/react.svg";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+  const [url, setUrl] = useState("");
+  const [message, setMessage] = useState("");
+  const [statut, setStatut] = useState("");
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+  async function verifierUrl() {
+    try {
+      const resultat = await invoke("valider_url_youtube", { url });
+      setMessage(resultat);
+      setStatut("succes");
+    } catch (erreur) {
+      setMessage(erreur);
+      setStatut("erreur");
+    }
   }
 
   return (
     <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
+      <h1>Convertisseur YouTube</h1>
       <form
         className="row"
         onSubmit={(e) => {
           e.preventDefault();
-          greet();
+          verifierUrl();
         }}
       >
         <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
+          value={url}
+          onChange={(e) => setUrl(e.currentTarget.value)}
+          placeholder="Colle ici une URL YouTube..."
         />
-        <button type="submit">Greet</button>
+        <button type="submit">Vérifier</button>
       </form>
-      <p>{greetMsg}</p>
+      {message && <p className={statut}>{message}</p>}
     </main>
   );
 }
