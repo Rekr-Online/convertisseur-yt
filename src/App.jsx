@@ -8,17 +8,6 @@ function App() {
   const [statut, setStatut] = useState("");
   const [chargement, setChargement] = useState(false);
 
-  async function verifierUrl() {
-    try {
-      const resultat = await invoke("valider_url_youtube", { url });
-      setMessage(resultat);
-      setStatut("succes");
-    } catch (erreur) {
-      setMessage(erreur);
-      setStatut("erreur");
-    }
-  }
-
   async function obtenirTitre() {
     setChargement(true);
     setMessage("Recherche du titre...");
@@ -35,6 +24,22 @@ function App() {
     }
   }
 
+  async function telecharger() {
+    setChargement(true);
+    setMessage("Téléchargement en cours...");
+    setStatut("");
+    try {
+      const resultat = await invoke("telecharger_audio", { url });
+      setMessage(resultat);
+      setStatut("succes");
+    } catch (erreur) {
+      setMessage(erreur);
+      setStatut("erreur");
+    } finally {
+      setChargement(false);
+    }
+  }
+
   return (
     <main className="container">
       <h1>Convertisseur YouTube</h1>
@@ -42,7 +47,7 @@ function App() {
         className="row"
         onSubmit={(e) => {
           e.preventDefault();
-          verifierUrl();
+          telecharger();
         }}
       >
         <input
@@ -50,9 +55,11 @@ function App() {
           onChange={(e) => setUrl(e.currentTarget.value)}
           placeholder="Colle ici une URL YouTube..."
         />
-        <button type="submit">Vérifier</button>
         <button type="button" onClick={obtenirTitre} disabled={chargement}>
           Obtenir le titre
+        </button>
+        <button type="submit" disabled={chargement}>
+          Télécharger en MP3
         </button>
       </form>
       {message && <p className={statut}>{message}</p>}
