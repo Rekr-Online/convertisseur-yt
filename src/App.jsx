@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Download, ThumbsUp } from "lucide-react";
+import { Download, ThumbsUp, Home } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useState, useEffect } from "react";
 import "./App.css";
@@ -63,6 +63,13 @@ async function lancerTelechargement() {
     setEtat("echec");
   }
 }
+function retourRepos() {
+  setEtat("repos");
+  setUrl("");
+  setTitre("");
+  setIdVideo("");
+  setProgression(0);
+}
 
   return (
     <main className="conteneur">
@@ -88,22 +95,10 @@ async function lancerTelechargement() {
       )}
 
 <div className="zone-action">
-  {etat === "succes" && (
-  <div className="medaillon-succes">
-    <div className="medaillon-succes__cercle">
-      <ThumbsUp size={60} color="#FFFFFF" />
-    </div>
-    <svg className="medaillon-succes__ondes" viewBox="0 0 220 220">
-      <circle cx="110" cy="110" r="60" fill="none" stroke="#D4A535" strokeWidth="2.5">
-        <animate attributeName="r" from="60" to="100" dur="1.8s" repeatCount="indefinite" />
-        <animate attributeName="opacity" from="0.7" to="0" dur="1.8s" repeatCount="indefinite" />
-      </circle>
-      <circle cx="110" cy="110" r="60" fill="none" stroke="#C8312E" strokeWidth="2.5">
-        <animate attributeName="r" from="60" to="100" dur="1.8s" begin="0.4s" repeatCount="indefinite" />
-        <animate attributeName="opacity" from="0.7" to="0" dur="1.8s" begin="0.4s" repeatCount="indefinite" />
-      </circle>
-    </svg>
-  </div>
+{etat === "succes" && (
+  <button className="medaillon-cliquable medaillon-cliquable--succes" onClick={retourRepos}>
+    <Home size={60} color="#FFFFFF" />
+  </button>
 )}
 {etat === "telechargement" && (
     <div className="barre-conteneur">
@@ -113,8 +108,12 @@ async function lancerTelechargement() {
       ></div>
     </div>
   )}
-
-  {etat !== "telechargement" && etat !== "succes" && (
+{etat === "echec" && (
+  <button className="medaillon-cliquable medaillon-cliquable--echec" onClick={retourRepos}>
+    <Home size={60} color="#FFFFFF" />
+  </button>
+)}
+  {etat !== "telechargement" && etat !== "succes" && etat !== "echec" && (
     <button
       type="button"
       className={`bouton-principal ${etat === "invalide" ? "bouton-principal--invalide" : ""}`}

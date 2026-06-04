@@ -136,41 +136,32 @@ body {
   border-radius: 12px 0 0 12px;
   transition: width 0.3s ease-out;
 }
-.medaillon-succes {
-  position: relative;
-  width: 220px;
-  height: 220px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.medaillon-succes__cercle {
+.medaillon-cliquable {
   width: 120px;
   height: 120px;
-  background: #1F5F4A;
-  border: 6px solid #D4A535;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
   box-shadow: 0 6px 12px rgba(26, 26, 26, 0.3);
-  z-index: 2;
-  animation: rebond 0.8s infinite;
+  padding: 0;
 }
 
-.medaillon-succes__ondes {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-  overflow: visible;
+.medaillon-cliquable--succes {
+  background: #1F5F4A;
+  border: 6px solid #D4A535;
 }
 
-@keyframes rebond {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.08); }
+.medaillon-cliquable--succes:hover {
+  background: #3E8B6E;
+}
+
+.medaillon-cliquable--echec {
+  background: #C8312E;
+  border: 6px solid #1F5F4A;
+}
+
+.medaillon-cliquable--echec:hover {
+  background: #E04945;
 }
