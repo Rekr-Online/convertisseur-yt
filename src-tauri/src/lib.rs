@@ -56,9 +56,9 @@ async fn telecharger_audio(
     url: String,
 ) -> Result<String, String> {
     use tauri::path::BaseDirectory;
-    use tauri::Manager;
+    use tauri::{Manager, Emitter};
+    use tauri_plugin_shell::process::CommandEvent;
 
-    // Dossier de sortie : Téléchargements/MesAudios
     let dossier = dirs::download_dir()
         .ok_or("Dossier Téléchargements introuvable")?
         .join("MesAudios");
@@ -66,7 +66,6 @@ async fn telecharger_audio(
     std::fs::create_dir_all(&dossier)
         .map_err(|e| format!("Impossible de créer le dossier : {}", e))?;
 
-    // Résout le chemin de ffmpeg (dans les ressources de l'app)
     let ffmpeg_path = app
         .path()
         .resolve("binaries/ffmpeg-x86_64-pc-windows-msvc.exe", BaseDirectory::Resource)
@@ -74,7 +73,8 @@ async fn telecharger_audio(
 
     let modele_sortie = dossier.join("%(title)s.%(ext)s");
 
-    let sortie = app
+    // Lance yt-dlp en mode streaming (au lieu de .output())
+    let (mut rx, _child) = app
         .shell()
         .sidecar("yt-dlp")
         .map_err(|e| format!("yt-dlp introuvable : {}", e))?
@@ -84,19 +84,40 @@ async fn telecharger_audio(
             "--audio-format", "mp3",
             "--audio-quality", "0",
             "--no-playlist",
+            "--newline",
             "--ffmpeg-location", ffmpeg_path.to_str().ok_or("Chemin ffmpeg invalide")?,
             "-o", modele_sortie.to_str().ok_or("Chemin invalide")?,
             &url,
         ])
-        .output()
-        .await
+        .spawn()
         .map_err(|e| format!("Erreur d'exécution : {}", e))?;
 
-    if sortie.status.success() {
+    // Regex pour extraire le pourcentage de progression
+    let regex_progression = Regex::new(r"(\d+\.?\d*)%")
+        .map_err(|e| format!("Regex invalide : {}", e))?;
+
+    let mut succes = false;
+
+    // Lit la sortie ligne par ligne au fur et à mesure
+    while let Some(event) = rx.recv().await {
+        if let CommandEvent::Stdout(ligne) = event {
+            let texte = String::from_utf8_lossy(&ligne);  // ← ligne à ajouter
+            if let Some(captures) = regex_progression.captures(&texte) {
+                if let Some(pourcentage) = captures.get(1) {
+                    let valeur: f32 = pourcentage.as_str().parse().unwrap_or(0.0);
+                    app.emit("progression", valeur)
+                        .map_err(|e| format!("Erreur d'émission : {}", e))?;
+                }
+            }
+        } else if let CommandEvent::Terminated(payload) = event {
+            succes = payload.code == Some(0);
+        }
+    }
+
+    if succes {
         Ok(format!("Téléchargement réussi dans : {}", dossier.display()))
     } else {
-        let erreur = String::from_utf8_lossy(&sortie.stderr).to_string();
-        Err(format!("Échec : {}", erreur))
+        Err("Échec du téléchargement".to_string())
     }
 }
 

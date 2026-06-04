@@ -102,3 +102,14 @@ convertisseur-yt/
 │   └── tauri.conf.json  ← Config de l'app (taille fenêtre, etc.)
 ├── package.json     ← Dépendances JS
 └── index.html       ← Point d'entrée du front
+
+## Binaires externes requis (non versionnés)
+
+À placer dans src-tauri/binaries/ avec ces noms exacts :
+- yt-dlp-x86_64-pc-windows-msvc.exe
+  → https://github.com/yt-dlp/yt-dlp/releases/latest
+- ffmpeg-x86_64-pc-windows-msvc.exe
+  → https://www.gyan.dev/ffmpeg/builds/ (release-essentials.zip, fichier bin/ffmpeg.exe)
+
+En mode dev, copier aussi ces deux fichiers dans :
+src-tauri/target/debug/binaries/

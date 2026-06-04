@@ -1,68 +1,118 @@
-import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { Download } from "lucide-react";
+import { listen } from "@tauri-apps/api/event";
+import { useState, useEffect } from "react";
 import "./App.css";
 
+// Regex pour extraire l'ID d'une URL YouTube (les 11 caractères de l'ID)
+const REGEX_ID = /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+
 function App() {
+  const [etat, setEtat] = useState("repos");
   const [url, setUrl] = useState("");
-  const [message, setMessage] = useState("");
-  const [statut, setStatut] = useState("");
-  const [chargement, setChargement] = useState(false);
+  const [titre, setTitre] = useState("");
+  const [idVideo, setIdVideo] = useState("");
+  const [progression, setProgression] = useState(0);
 
-  async function obtenirTitre() {
-    setChargement(true);
-    setMessage("Recherche du titre...");
-    setStatut("");
+
+useEffect(() => {
+  const unlisten = listen("progression", (event) => {
+    setProgression(event.payload);
+  });
+
+  return () => {
+    unlisten.then((fn) => fn());
+  };
+}, []);
+  // Appelée quand l'utilisateur colle dans le champ URL
+  async function gererCollage(e) {
+    e.preventDefault();
+    const texteColle = e.clipboardData.getData("text");
+    setUrl(texteColle);
+
     try {
-      const titre = await invoke("obtenir_titre_video", { url });
-      setMessage(`Titre : ${titre}`);
-      setStatut("succes");
-    } catch (erreur) {
-      setMessage(erreur);
-      setStatut("erreur");
-    } finally {
-      setChargement(false);
+      await invoke("valider_url_youtube", { url: texteColle });
+
+      const match = texteColle.match(REGEX_ID);
+      if (match) {
+        setIdVideo(match[1]);
+      }
+
+      try {
+        const titreRecu = await invoke("obtenir_titre_video", { url: texteColle });
+        setTitre(titreRecu);
+        setEtat("repos");
+      } catch {
+        setEtat("invalide");
+        setTitre("");
+        setIdVideo("");
+      }
+    } catch {
+      setEtat("invalide");
+      setTitre("");
+      setIdVideo("");
     }
   }
-
-  async function telecharger() {
-    setChargement(true);
-    setMessage("Téléchargement en cours...");
-    setStatut("");
-    try {
-      const resultat = await invoke("telecharger_audio", { url });
-      setMessage(resultat);
-      setStatut("succes");
-    } catch (erreur) {
-      setMessage(erreur);
-      setStatut("erreur");
-    } finally {
-      setChargement(false);
-    }
+async function lancerTelechargement() {
+  setProgression(0);
+  setEtat("telechargement");
+  try {
+    await invoke("telecharger_audio", { url });
+    setEtat("succes");
+  } catch {
+    setEtat("echec");
   }
+}
 
   return (
-    <main className="container">
-      <h1>Convertisseur YouTube</h1>
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          telecharger();
-        }}
-      >
-        <input
-          value={url}
-          onChange={(e) => setUrl(e.currentTarget.value)}
-          placeholder="Colle ici une URL YouTube..."
-        />
-        <button type="button" onClick={obtenirTitre} disabled={chargement}>
-          Obtenir le titre
-        </button>
-        <button type="submit" disabled={chargement}>
-          Télécharger en MP3
-        </button>
-      </form>
-      {message && <p className={statut}>{message}</p>}
+    <main className="conteneur">
+      <input
+        type="text"
+        className={`champ-url ${etat === "invalide" ? "champ-url--invalide" : ""}`}
+        value={url}
+        onChange={(e) => setUrl(e.currentTarget.value)}
+        onPaste={gererCollage}
+        placeholder="Coller ici..."
+      />
+
+      {/* Cadre titre + miniature, visible seulement si on a un titre */}
+      {titre && idVideo && (
+        <div className="cadre-info">
+          <img
+            src={`https://img.youtube.com/vi/${idVideo}/mqdefault.jpg`}
+            alt=""
+            className="miniature"
+          />
+          <div className="titre">{titre}</div>
+        </div>
+      )}
+
+<div className="zone-action">
+  {etat === "telechargement" && (
+    <div className="barre-conteneur">
+      <div
+        className="barre-remplissage"
+        style={{ width: `${progression}%` }}
+      ></div>
+    </div>
+  )}
+
+  {etat !== "telechargement" && (
+    <button
+      type="button"
+      className={`bouton-principal ${etat === "invalide" ? "bouton-principal--invalide" : ""}`}
+      disabled={etat === "invalide"}
+      onClick={lancerTelechargement}
+    >
+      <Download size={44} />
+      {etat === "invalide" && (
+        <svg className="barre-invalide" viewBox="0 0 120 120">
+          <line x1="20" y1="20" x2="100" y2="100" stroke="#C8312E" strokeWidth="8" strokeLinecap="round" />
+        </svg>
+      )}
+    </button>
+  )}
+</div>
     </main>
   );
 }
