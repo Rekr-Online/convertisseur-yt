@@ -25,4 +25,11 @@ serde_json = "1"
 regex = "1.12.3"
 tauri-plugin-shell = "2.3.5"
 dirs = "6.0.0"
+axum = "0.8"
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.6", features = ["fs"] }
+local-ip-address = "0.6"
+qrcode = { version = "0.14", features = ["image"] }
+image = "0.25"
+base64 = "0.22"
 

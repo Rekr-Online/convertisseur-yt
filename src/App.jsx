@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Download, ThumbsUp, Home } from "lucide-react";
+import { Download, ThumbsUp, Home, QrCode, X } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { useState, useEffect } from "react";
 import "./App.css";
@@ -13,6 +13,10 @@ function App() {
   const [titre, setTitre] = useState("");
   const [idVideo, setIdVideo] = useState("");
   const [progression, setProgression] = useState(0);
+  const [adresseServeur, setAdresseServeur] = useState(null);
+  const [qrCode, setQrCode] = useState(null);
+  const [chargementQr, setChargementQr] = useState(false);
+  const [modalOuvert, setModalOuvert] = useState(false);
 
 
 useEffect(() => {
@@ -63,6 +67,25 @@ async function lancerTelechargement() {
     setEtat("echec");
   }
 }
+// Démarre le serveur (idempotent côté Rust) puis génère son QR — les deux ne sont
+// relancés qu'une fois, un réaffichage du modal réutilise l'adresse déjà obtenue.
+async function ouvrirTransfert() {
+  setModalOuvert(true);
+  if (qrCode) return;
+
+  setChargementQr(true);
+  try {
+    const adresse = await invoke("demarrer_serveur_transfert");
+    setAdresseServeur(adresse);
+    const image = await invoke("generer_qr_code", { texte: adresse });
+    setQrCode(image);
+  } catch (erreur) {
+    console.error("Erreur transfert :", erreur);
+  } finally {
+    setChargementQr(false);
+  }
+}
+
 function retourRepos() {
   setEtat("repos");
   setUrl("");
@@ -73,6 +96,34 @@ function retourRepos() {
 
   return (
     <main className="conteneur">
+      <button
+        type="button"
+        className="bouton-qr"
+        onClick={ouvrirTransfert}
+        title="Transfert de musique"
+      >
+        <QrCode size={22} />
+      </button>
+
+      {modalOuvert && (
+        <div className="superposition-qr" onClick={() => setModalOuvert(false)}>
+          <div className="carte-qr" onClick={(e) => e.stopPropagation()}>
+            {chargementQr && <p>Démarrage du serveur...</p>}
+            {qrCode && (
+              <img
+                src={`data:image/png;base64,${qrCode}`}
+                alt="QR code de connexion"
+                className="image-qr"
+              />
+            )}
+            {adresseServeur && <div className="adresse-qr">{adresseServeur}</div>}
+            <button type="button" className="bouton-fermer-qr" onClick={() => setModalOuvert(false)}>
+              <X size={18} /> Fermer
+            </button>
+          </div>
+        </div>
+      )}
+
       <input
         type="text"
         className={`champ-url ${etat === "invalide" ? "champ-url--invalide" : ""}`}
